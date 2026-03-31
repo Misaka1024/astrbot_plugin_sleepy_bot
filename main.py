@@ -24,7 +24,6 @@ class SleepyPlugin(Star):
                 elapsed = datetime.now() - self.last_wake_up_time
                 if elapsed.total_seconds() >= 18 * 3600:
                     logger.info("Bot 已连续工作18小时，准备入睡...")
-                    # 自动触发入睡不需要传入 event
                     asyncio.create_task(self.run_sleep_cycle())
 
     async def run_sleep_cycle(self, event: AstrMessageEvent = None):
@@ -46,20 +45,41 @@ class SleepyPlugin(Star):
         
         # 醒来后的清理
         self.is_sleeping = False
-        interaction_task.cancel()
+        if not interaction_task.done():
+            interaction_task.cancel()
         self.last_wake_up_time = datetime.now()
         logger.info("Bot 睡眠结束，已醒来")
 
     async def sleep_interactions(self):
-        """睡觉期间的随机小互动（仅记录日志，若要发消息需额外适配）"""
+        """睡觉期间的随机小互动"""
         dreams = ["(砸吧砸吧嘴) 那个...谱面好像...", "Zzz...", "唔...这里的歌词...", "(小声嘀咕) 爱希..."]
         actions = ["(翻了个身，继续沉睡)", "(发出了轻微的呼吸声)", "(扯了扯运动服的领口)"]
         
         while self.is_sleeping:
-            # 每 40~90 分钟触发一次
             await asyncio.sleep(random.randint(2400, 5400))
             if self.is_sleeping:
                 content = random.choice(dreams + actions)
                 logger.info(f"Bot 正在说梦话: {content}")
 
-    @filter.command
+    @filter.command("我要你睡觉")
+    async def force_sleep(self, event: AstrMessageEvent):
+        """手动指令触发入睡"""
+        async for result in self.run_sleep_cycle(event):
+            yield result
+
+    async def on_event(self, event: AstrMessageEvent):
+        """核心拦截逻辑：睡觉时无视消息"""
+        if self.is_sleeping:
+            # 只有 "/醒醒" 指令可以中断睡眠状态
+            if event.message_str.strip() == "/醒醒":
+                self.is_sleeping = False
+                self.last_wake_up_time = datetime.now()
+                yield event.plain_result("...诶？被吵醒了...早安...")
+                return
+            
+            # 拦截其他所有消息
+            event.stop_event()
+
+    async def terminate(self):
+        """插件卸载时确保状态重置"""
+        self.is_sleeping = False
