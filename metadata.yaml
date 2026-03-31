@@ -1,0 +1,6 @@
+name: astrbot_plugin_sleepy_bot # 插件唯一识别名
+display_name: 乖乖睡觉 # 展示名称
+desc: 让 Bot 模拟真实人类作息，支持自动入睡、梦话和翻身互动。
+version: v1.0.0
+author: Artenas # 既然是你在照顾爱希，就填你的名字吧
+repo: https://github.com/Misaka1024/astrbot_plugin_sleepy_bot
