@@ -70,18 +70,20 @@ class SleepyPlugin(Star):
         async for result in self.start_sleeping(event):
             yield result
 
-    @filter.on_event()
-    async def message_interceptor(self, event: AstrMessageEvent):
-        """拦截所有消息，如果正在睡觉则不予回复"""
+    # 替换掉原来的 @filter.on_event() 部分
+    async def on_event(self, event: AstrMessageEvent):
+        """监听所有事件的钩子"""
         if self.is_sleeping:
             # 排除掉唤醒指令，防止死锁
-            if event.message_str == "/醒醒":
+            # 这里的判断可以根据你实际的指令前缀来改，比如 /醒醒
+            if event.message_str.strip() == "/醒醒":
                 self.is_sleeping = False
-                yield event.plain_result("...诶？被吵醒了...") [cite: 183]
+                # 注意：在 on_event 钩子里通常使用 yield 发送
+                yield event.plain_result("...诶？被吵醒了...早安...")
                 return
                 
-            # 停止事件继续向后传递 
-            event.stop_event() 
+            # 正在睡觉时，拦截其他所有消息
+            event.stop_event()
 
     async def terminate(self):
         """销毁时清理任务 """
